@@ -1,5 +1,10 @@
 pipeline {
     agent any
+    environment {
+        PROJECT_DIR = 'D:\\inventory-service-main'
+        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-21'
+        PATH = "${env.JAVA_HOME}\\bin;${env.PATH}"
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -8,12 +13,18 @@ pipeline {
         }
         stage('Build') {
             steps {
-                bat 'wsl --cd /mnt/d/inventory-service-main ./mvnw clean package'
+                powershell '''
+                    cd $env:PROJECT_DIR
+                    ./mvnw clean package
+                '''
             }
         }
         stage('Test') {
             steps {
-                bat 'wsl --cd /mnt/d/inventory-service-main ./mvnw test'
+                powershell '''
+                    cd $env:PROJECT_DIR
+                    ./mvnw test
+                '''
             }
             post {
                 always {
@@ -31,23 +42,39 @@ pipeline {
         }
         stage('Code Analysis') {
             steps {
-                bat 'wsl --cd /mnt/d/inventory-service-main ./mvnw sonar:sonar || echo SonarQube not configured, skipping'
+                powershell '''
+                    cd $env:PROJECT_DIR
+                    try {
+                        ./mvnw sonar:sonar
+                    } catch {
+                        Write-Host 'SonarQube not configured, skipping'
+                    }
+                '''
             }
         }
         stage('Build Docker Image') {
             steps {
-                bat 'wsl --cd /mnt/d/inventory-service-main docker build -t inventory-service:latest .'
+                powershell '''
+                    cd $env:PROJECT_DIR
+                    docker build -t inventory-service:latest .
+                '''
             }
         }
         stage('Deploy with Ansible') {
             steps {
-                bat 'wsl --cd /mnt/d/inventory-service-main ansible-playbook -i inventory/localhost.yml deploy.yml'
+                powershell '''
+                    cd $env:PROJECT_DIR
+                    ansible-playbook -i inventory/localhost.yml deploy.yml
+                '''
             }
         }
         stage('Verify Deployment') {
             steps {
-                bat 'timeout 5'
-                bat 'wsl curl -f http://localhost:8080/api/inventory || exit 1'
+                powershell '''
+                    Start-Sleep -Seconds 5
+                    $response = Invoke-WebRequest -Uri http://localhost:8080/api/inventory -UseBasicParsing -ErrorAction SilentlyContinue
+                    if (-not $response) { exit 1 }
+                '''
             }
         }
     }
