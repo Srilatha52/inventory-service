@@ -1,25 +1,44 @@
 pipeline {
     agent any
+    environment {
+        // Optional: Set JAVA_HOME if needed in Windows
+        JAVA_HOME = "C:\\path\\to\\jdk-22"  // Adjust if JDK is installed in Windows
+    }
     stages {
+        stage('Checkout') {
+            steps {
+                // Pulls from Git
+                git branch: 'main', url: 'https://github.com/Srilatha52/inventory-service.git'
+            }
+        }
         stage('Build') {
             steps {
-                bat './mvnw clean package'
+                bat 'mvnw.cmd clean package'
             }
         }
         stage('Test') {
             steps {
-                bat './mvnw test'
+                bat 'mvnw.cmd test'
             }
             post {
                 always {
+                    // Publish test results and JaCoCo report
                     junit 'target/surefire-reports/*.xml'
-                    publishHTML(target: [reportDir: 'target/site/jacoco', reportFiles: 'index.html', reportName: 'JaCoCo Report'])
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Report'
+                    ])
                 }
             }
         }
         stage('Code Analysis') {
             steps {
-                bat 'mvnw.cmd sonar:sonar'
+                // Skip if SonarQube not configured
+                bat 'mvnw.cmd sonar:sonar || echo "SonarQube not configured, skipping"'
             }
         }
         stage('Build Docker Image') {
@@ -34,14 +53,20 @@ pipeline {
         }
         stage('Verify Deployment') {
             steps {
-                bat 'timeout 5'
-                bat 'curl -f http://localhost:8080/api/inventory || exit /b 1'  # Use 8082 if changed
+                bat 'timeout 5'  // Wait for container to start
+                bat 'curl -f http://localhost:8080/api/inventory || exit /b 1'
             }
         }
     }
     post {
         always {
-            archiveArtifacts 'target/*.jar'
+            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
+        }
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Deployment failed.'
         }
     }
 }
