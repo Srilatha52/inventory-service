@@ -40,6 +40,9 @@ pipeline {
         }
 
         stage('Code Analysis') {
+            environment {
+                SONAR_TOKEN = credentials('SONAR_TOKEN') // Securely inject token from Jenkins
+            }
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
@@ -48,8 +51,9 @@ pipeline {
                             -v "${unixWorkspace}:${unixWorkspace}" ^
                             -w "${unixWorkspace}" ^
                             -e SONAR_HOST_URL=http://host.docker.internal:9000 ^
+                            -e SONAR_TOKEN=${SONAR_TOKEN} ^
                             ${DOCKER_IMAGE} ^
-                            mvn sonar:sonar
+                            mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}
                     """
                 }
             }
@@ -67,7 +71,7 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/c/Users/srila/ansible' // Update if your Ansible files are elsewhere
+                    def ansiblePath = '/c/Users/srila/ansible' // Update if needed
 
                     bat """
                         docker run --rm ^
