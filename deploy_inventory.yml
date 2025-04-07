@@ -1,0 +1,14 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    port: 8080
+  tasks:
+    - name: Stop old container if running
+      shell: docker stop inventory-service || true
+
+    - name: Remove old container if exists
+      shell: docker rm inventory-service || true
+
+    - name: Run new container
+      shell: docker run -d --name inventory-service -p {{ port }}:8080 inventory-service
