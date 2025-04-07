@@ -13,15 +13,12 @@ pipeline {
         stage('Build and Test in Docker') {
             steps {
                 script {
-                    // Build Docker image
                     sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Convert Jenkins workspace path to Unix-style for Docker
-                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
+                    def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
 
-                    // Run Maven build inside container using correct mount and working dir
                     sh """
-                        docker run --rm -v ${unixWorkspace}:${unixWorkspace} -w ${unixWorkspace} ${DOCKER_IMAGE} mvn clean package
+                        docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn clean package
                     """
                 }
             }
@@ -44,10 +41,10 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 script {
-                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
+                    def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
 
                     sh """
-                        docker run --rm -v ${unixWorkspace}:${unixWorkspace} -w ${unixWorkspace} ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
             }
@@ -64,13 +61,13 @@ pipeline {
         stage('Deploy with Ansible') {
             steps {
                 script {
-                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
-                    def ansiblePlaybookPath = '/c/Users/srila/ansible' // Update this if needed
+                    def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
+                    def ansiblePath = '/c/Users/srila/ansible' // 🔁 Update to your actual path if needed
 
                     sh """
                         docker run --rm \
-                            -v ${ansiblePlaybookPath}:/ansible \
-                            -v ${unixWorkspace}:${unixWorkspace} \
+                            -v "${ansiblePath}:/ansible" \
+                            -v "${unixWorkspace}:${unixWorkspace}" \
                             -w /ansible \
                             ${DOCKER_IMAGE} \
                             ansible-playbook -i inventory/localhost.yml deploy.yml
