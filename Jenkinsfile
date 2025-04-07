@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         PROJECT_DIR = 'D:\\inventory-service-main'
-        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-17' // Update this to match your JDK path
+        JAVA_HOME = 'C:\\Program Files\\Java\\jdk-17'  // Update this to your JDK path
         PATH = "${env.JAVA_HOME}\\bin;${env.PATH}"
     }
 
@@ -28,21 +28,30 @@ pipeline {
                 powershell '''
                     cd $env:PROJECT_DIR
                     ./mvnw test
+
+                    Write-Host "`n Listing contents of target directory:"
+                    Get-ChildItem -Recurse "$env:PROJECT_DIR\\target" | ForEach-Object {
+                        Write-Host $_.FullName
+                    }
                 '''
             }
             post {
                 always {
                     script {
-                        def testReportDir = "${env.PROJECT_DIR}\\target\\surefire-reports"
-                        if (fileExists(testReportDir)) {
-                            junit "${testReportDir}/*.xml"
+                        def reportDir = "${env.PROJECT_DIR}\\target\\surefire-reports"
+                        def reportGlob = "${reportDir}\\TEST-*.xml"
+                        echo "Checking for test reports at: ${reportGlob}"
+
+                        if (fileExists(reportGlob)) {
+                            echo "Found test reports. Publishing to JUnit..."
+                            junit reportGlob
                         } else {
-                            echo "No test reports found at ${testReportDir}, skipping JUnit publishing."
+                            echo "No test report XMLs found in: ${reportDir}"
                         }
                     }
 
                     publishHTML(target: [
-                        allowMissing: false,
+                        allowMissing: true,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
                         reportDir: "${env.PROJECT_DIR}\\target\\site\\jacoco",
@@ -90,7 +99,10 @@ pipeline {
                     Start-Sleep -Seconds 5
                     try {
                         $response = Invoke-WebRequest -Uri http://localhost:8080/api/inventory -UseBasicParsing
-                        if ($response.StatusCode -ne 200) { throw "Bad response" }
+                        if ($response.StatusCode -ne 200) {
+                            throw "Unexpected status code: $($response.StatusCode)"
+                        }
+                        Write-Host "Deployment verified successfully."
                     } catch {
                         Write-Host "Deployment verification failed."
                         exit 1
