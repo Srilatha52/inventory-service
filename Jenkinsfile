@@ -13,15 +13,15 @@ pipeline {
         stage('Build and Test in Docker') {
             steps {
                 script {
-                    // Build the Docker image
+                    // Build Docker image
                     sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Convert Windows path to Docker-compatible Unix-style path
+                    // Convert Jenkins workspace path to Unix-style for Docker
                     def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
 
-                    // Run tests and generate reports
+                    // Run Maven build inside container using correct mount and working dir
                     sh """
-                        docker run --rm -v ${unixWorkspace}:/app -w /app ${DOCKER_IMAGE} mvn clean package
+                        docker run --rm -v ${unixWorkspace}:${unixWorkspace} -w ${unixWorkspace} ${DOCKER_IMAGE} mvn clean package
                     """
                 }
             }
@@ -47,7 +47,7 @@ pipeline {
                     def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
 
                     sh """
-                        docker run --rm -v ${unixWorkspace}:/app -w /app ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm -v ${unixWorkspace}:${unixWorkspace} -w ${unixWorkspace} ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
             }
@@ -65,12 +65,12 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
-                    def ansiblePlaybookPath = '/c/Users/srila/ansible' // Update this to your actual path
+                    def ansiblePlaybookPath = '/c/Users/srila/ansible' // Update this if needed
 
                     sh """
                         docker run --rm \
                             -v ${ansiblePlaybookPath}:/ansible \
-                            -v ${unixWorkspace}:/app \
+                            -v ${unixWorkspace}:${unixWorkspace} \
                             -w /ansible \
                             ${DOCKER_IMAGE} \
                             ansible-playbook -i inventory/localhost.yml deploy.yml
