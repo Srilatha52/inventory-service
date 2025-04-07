@@ -13,15 +13,14 @@ pipeline {
         stage('Build and Test in Docker') {
             steps {
                 script {
-                    // Convert to Docker-compatible Unix path
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-
-                    // Build Docker image
                     bat "docker build -t ${DOCKER_IMAGE} ."
-
-                    // Run tests in container with mounted workspace
                     bat """
-                        docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn clean package
+                        docker run --rm ^
+                            -v "${unixWorkspace}:${unixWorkspace}" ^
+                            -w "${unixWorkspace}" ^
+                            ${DOCKER_IMAGE} ^
+                            mvn clean package
                     """
                 }
             }
@@ -44,9 +43,13 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-
                     bat """
-                        docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm ^
+                            -v "${unixWorkspace}:${unixWorkspace}" ^
+                            -w "${unixWorkspace}" ^
+                            -e SONAR_HOST_URL=http://host.docker.internal:9000 ^
+                            ${DOCKER_IMAGE} ^
+                            mvn sonar:sonar
                     """
                 }
             }
@@ -64,7 +67,7 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/c/Users/srila/ansible' // Update this if needed
+                    def ansiblePath = '/c/Users/srila/ansible' // Update if your Ansible files are elsewhere
 
                     bat """
                         docker run --rm ^
