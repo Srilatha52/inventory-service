@@ -14,22 +14,21 @@ pipeline {
             steps {
                 script {
                     // Build the Docker image
-                    sh """
-                        docker build -t ${DOCKER_IMAGE} .
-                    """
+                    sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Run tests and mount workspace to preserve results
+                    // Convert Windows path to Docker-compatible Unix-style path
+                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
+
+                    // Run tests and generate reports
                     sh """
-                        docker run --rm -v $WORKSPACE:/app -w /app ${DOCKER_IMAGE} mvn clean package
+                        docker run --rm -v ${unixWorkspace}:/app -w /app ${DOCKER_IMAGE} mvn clean package
                     """
                 }
             }
             post {
                 always {
-                    // Collect test reports generated inside Docker
                     junit 'target/surefire-reports/*.xml'
 
-                    // Publish JaCoCo coverage report
                     publishHTML(target: [
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
@@ -45,9 +44,10 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 script {
-                    // Run SonarQube analysis with mounted workspace
+                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
+
                     sh """
-                        docker run --rm -v $WORKSPACE:/app -w /app ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm -v ${unixWorkspace}:/app -w /app ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
             }
@@ -56,10 +56,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Rebuild final Docker image if needed
-                    sh """
-                        docker build -t inventory-service:latest .
-                    """
+                    sh "docker build -t inventory-service:latest ."
                 }
             }
         }
@@ -67,9 +64,16 @@ pipeline {
         stage('Deploy with Ansible') {
             steps {
                 script {
-                    // Assuming you have a local path with playbooks to mount
+                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
+                    def ansiblePlaybookPath = '/c/Users/srila/ansible' // Update this to your actual path
+
                     sh """
-                        docker run --rm -v /path/to/ansible-playbook:/app ${DOCKER_IMAGE} ansible-playbook -i inventory/localhost.yml deploy.yml
+                        docker run --rm \
+                            -v ${ansiblePlaybookPath}:/ansible \
+                            -v ${unixWorkspace}:/app \
+                            -w /ansible \
+                            ${DOCKER_IMAGE} \
+                            ansible-playbook -i inventory/localhost.yml deploy.yml
                     """
                 }
             }
