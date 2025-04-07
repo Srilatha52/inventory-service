@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         DOCKER_IMAGE = 'inventory-service-container'
         WORKSPACE_UNIX = "/c/Users/srila/.jenkins/workspace/Inventory-service-main"
@@ -27,19 +28,15 @@ pipeline {
             }
             post {
                 always {
-                    script {
-                        node {
-                            junit 'target/surefire-reports/*.xml'
-                            publishHTML(target: [
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: 'target/site/jacoco',
-                                reportFiles: 'index.html',
-                                reportName: 'JaCoCo Report'
-                            ])
-                        }
-                    }
+                    junit 'target/surefire-reports/*.xml'
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target/site/jacoco',
+                        reportFiles: 'index.html',
+                        reportName: 'JaCoCo Report'
+                    ])
                 }
             }
         }
@@ -47,16 +44,14 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    script {
-                        sh """
-                            docker run --rm \
-                            -e SONAR_HOST_URL=http://host.docker.internal:9000 \
-                            -e SONAR_TOKEN=$SONAR_TOKEN \
-                            -v ${WORKSPACE_UNIX}:${WORKSPACE_UNIX} \
-                            -w ${WORKSPACE_UNIX} \
-                            ${DOCKER_IMAGE} mvn sonar:sonar
-                        """
-                    }
+                    sh """
+                        docker run --rm \
+                        -e SONAR_HOST_URL=http://host.docker.internal:9000 \
+                        -e SONAR_TOKEN=$SONAR_TOKEN \
+                        -v ${WORKSPACE_UNIX}:${WORKSPACE_UNIX} \
+                        -w ${WORKSPACE_UNIX} \
+                        ${DOCKER_IMAGE} mvn sonar:sonar
+                    """
                 }
             }
         }
@@ -82,9 +77,7 @@ pipeline {
 
     post {
         always {
-            node {
-                archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
-            }
+            archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
         }
         success {
             echo 'Deployment successful!'
