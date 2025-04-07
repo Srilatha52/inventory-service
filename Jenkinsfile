@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'inventory-service-container'
-        WORKSPACE_UNIX = "${env.WORKSPACE}".replace('C:\\', '/c/').replaceAll('\\\\', '/')
+        WORKSPACE_UNIX = '/c/Users/srila/.jenkins/workspace/Inventory-service-main'
     }
 
     stages {
@@ -13,11 +13,15 @@ pipeline {
             }
         }
 
-        stage('Build and Test in Docker') {
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE} ."
+            }
+        }
+
+        stage('Build & Test in Docker') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE} ."
-
                     sh """
                         docker run --rm \
                         -v ${WORKSPACE_UNIX}:${WORKSPACE_UNIX} \
@@ -41,7 +45,7 @@ pipeline {
             }
         }
 
-        stage('Code Analysis') {
+        stage('Code Analysis with SonarQube') {
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
                     sh """
@@ -56,15 +60,9 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Deploy with Ansible (WSL)') {
             steps {
-                sh "docker build -t inventory-service:latest ."
-            }
-        }
-
-        stage('Deploy with Ansible') {
-            steps {
-                bat 'wsl sh -c "cd ~/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
+                bat 'wsl bash -c "cd ~/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
             }
         }
 
