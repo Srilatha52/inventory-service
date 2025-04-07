@@ -18,13 +18,14 @@ pipeline {
                     def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
                     def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
 
+                    // Build Docker image
                     sh "docker build -t ${DOCKER_IMAGE} ."
 
+                    // Run Maven inside container by cd'ing to folder instead of using -w
                     sh """
                         docker run --rm \
                         -v ${unixPath}:${unixPath} \
-                        -w ${unixPath} \
-                        ${DOCKER_IMAGE} mvn clean verify
+                        ${DOCKER_IMAGE} sh -c "cd ${unixPath} && mvn clean verify"
                     """
                 }
             }
@@ -55,8 +56,7 @@ pipeline {
                             -e SONAR_TOKEN=${SONAR_TOKEN} \
                             -e SONAR_HOST_URL=http://host.docker.internal:9000 \
                             -v ${unixPath}:${unixPath} \
-                            -w ${unixPath} \
-                            ${DOCKER_IMAGE} mvn sonar:sonar
+                            ${DOCKER_IMAGE} sh -c "cd ${unixPath} && mvn sonar:sonar"
                         """
                     }
                 }
