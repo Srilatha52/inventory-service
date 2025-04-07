@@ -8,30 +8,23 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/Srilatha52/inventory-service.git'
-            }
-        }
-
         stage('Build & Test in Docker') {
+            agent any
             steps {
                 script {
-                    node {
-                        def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                        def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
+                    def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
+                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
 
-                        echo "Unix Path for Docker: ${unixPath}"
+                    echo "Unix Path for Docker: ${unixPath}"
 
-                        sh "docker build -t ${DOCKER_IMAGE} ."
+                    sh "docker build -t ${DOCKER_IMAGE} ."
 
-                        sh """
-                            docker run --rm \
-                            -v ${unixPath}:${unixPath} \
-                            -w ${unixPath} \
-                            ${DOCKER_IMAGE} mvn clean verify
-                        """
-                    }
+                    sh """
+                        docker run --rm \
+                        -v ${unixPath}:${unixPath} \
+                        -w ${unixPath} \
+                        ${DOCKER_IMAGE} mvn clean verify
+                    """
                 }
             }
             post {
@@ -50,21 +43,20 @@ pipeline {
         }
 
         stage('Code Analysis with SonarQube') {
+            agent any
             steps {
                 script {
-                    node {
-                        def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                        def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
+                    def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
+                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
 
-                        sh """
-                            docker run --rm \
-                            -e SONAR_HOST_URL=${SONAR_URL} \
-                            -e SONAR_TOKEN=${SONAR_TOKEN} \
-                            -v ${unixPath}:${unixPath} \
-                            -w ${unixPath} \
-                            ${DOCKER_IMAGE} mvn sonar:sonar
-                        """
-                    }
+                    sh """
+                        docker run --rm \
+                        -e SONAR_HOST_URL=${SONAR_URL} \
+                        -e SONAR_TOKEN=${SONAR_TOKEN} \
+                        -v ${unixPath}:${unixPath} \
+                        -w ${unixPath} \
+                        ${DOCKER_IMAGE} mvn sonar:sonar
+                    """
                 }
             }
         }
@@ -93,10 +85,10 @@ pipeline {
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
         }
         success {
-            echo ' Deployment successful!'
+            echo 'Deployment successful!'
         }
         failure {
-            echo ' Deployment failed.'
+            echo 'Deployment failed.'
         }
     }
 }
