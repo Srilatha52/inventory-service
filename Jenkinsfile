@@ -13,11 +13,10 @@ pipeline {
         stage('Build and Test in Docker') {
             steps {
                 script {
+                    def unixWorkspace = "/c/Users/srila/.jenkins/workspace/Inventory-service-main"
+
                     // Build Docker image
                     sh "docker build -t ${DOCKER_IMAGE} ."
-
-                    // Convert Windows path to Unix path for volume mount
-                    def unixWorkspace = WORKSPACE.replaceAll('\\\\', '/').replaceAll('C:', '/c')
 
                     // Run tests and generate coverage
                     sh """
@@ -43,9 +42,14 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 script {
+                    def unixWorkspace = "/c/Users/srila/.jenkins/workspace/Inventory-service-main"
                     sh """
-                        docker run --rm -e SONAR_HOST_URL=http://host.docker.internal:9000 -e SONAR_TOKEN=<squ_4985d7be0d87edee0f5aa2c58770441f372eddbf> \
-                        -v ${env.WORKSPACE}:${env.WORKSPACE} -w ${env.WORKSPACE} ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm \
+                        -e SONAR_HOST_URL=http://host.docker.internal:9000 \
+                        -e SONAR_TOKEN=<squ_4985d7be0d87edee0f5aa2c58770441f372eddbf> \
+                        -v ${unixWorkspace}:${unixWorkspace} \
+                        -w ${unixWorkspace} \
+                        ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
             }
@@ -59,7 +63,7 @@ pipeline {
 
         stage('Deploy with Ansible') {
             steps {
-                // Runs Ansible inside real WSL Ubuntu with project copied to ~/inventory-service-main
+                // Run Ansible from real Ubuntu WSL where your project is copied to ~/inventory-service-main
                 bat 'wsl sh -c "cd ~/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
             }
         }
