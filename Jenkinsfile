@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'inventory-service-container'
         SONAR_URL = 'http://host.docker.internal:9000'
-        SONAR_TOKEN = credentials('sonarqube-token') // Replace this with the correct Jenkins credential ID
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
 
     stages {
@@ -17,21 +17,21 @@ pipeline {
         stage('Build & Test in Docker') {
             steps {
                 script {
-                    def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1')  // correct case
+                    node {
+                        def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
+                        def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
 
-                    echo "✅ Unix Path for Docker: ${unixPath}"
+                        echo "Unix Path for Docker: ${unixPath}"
 
-                    // Build Docker image
-                    sh "docker build -t ${DOCKER_IMAGE} ."
+                        sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Run tests and generate coverage
-                    sh """
-                        docker run --rm \
-                        -v ${unixPath}:${unixPath} \
-                        -w ${unixPath} \
-                        ${DOCKER_IMAGE} mvn clean verify
-                    """
+                        sh """
+                            docker run --rm \
+                            -v ${unixPath}:${unixPath} \
+                            -w ${unixPath} \
+                            ${DOCKER_IMAGE} mvn clean verify
+                        """
+                    }
                 }
             }
             post {
@@ -52,17 +52,19 @@ pipeline {
         stage('Code Analysis with SonarQube') {
             steps {
                 script {
-                    def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1')
+                    node {
+                        def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
+                        def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
 
-                    sh """
-                        docker run --rm \
-                        -e SONAR_HOST_URL=${SONAR_URL} \
-                        -e SONAR_TOKEN=${SONAR_TOKEN} \
-                        -v ${unixPath}:${unixPath} \
-                        -w ${unixPath} \
-                        ${DOCKER_IMAGE} mvn sonar:sonar
-                    """
+                        sh """
+                            docker run --rm \
+                            -e SONAR_HOST_URL=${SONAR_URL} \
+                            -e SONAR_TOKEN=${SONAR_TOKEN} \
+                            -v ${unixPath}:${unixPath} \
+                            -w ${unixPath} \
+                            ${DOCKER_IMAGE} mvn sonar:sonar
+                        """
+                    }
                 }
             }
         }
