@@ -1,5 +1,5 @@
 # Use a base image that supports Java and Maven
-FROM maven:3.8.6-openjdk-22-slim
+FROM eclipse-temurin:22-jdk
 
 # Set the working directory
 WORKDIR /app
