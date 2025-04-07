@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        DOCKER_IMAGE = 'inventory-service-container'  // Image name for the container
+        DOCKER_IMAGE = 'inventory-service-container'
     }
     stages {
         stage('Checkout') {
@@ -9,23 +9,27 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/Srilatha52/inventory-service.git'
             }
         }
+
         stage('Build and Test in Docker') {
             steps {
                 script {
-                    // Build the Docker image if not already built
+                    // Build the Docker image
                     sh """
                         docker build -t ${DOCKER_IMAGE} .
                     """
-                    // Run the container and execute build and test commands
+
+                    // Run tests and mount workspace to preserve results
                     sh """
-                        docker run --rm ${DOCKER_IMAGE} mvn clean package
-                        docker run --rm ${DOCKER_IMAGE} mvn test
+                        docker run --rm -v $WORKSPACE:/app -w /app ${DOCKER_IMAGE} mvn clean package
                     """
                 }
             }
             post {
                 always {
+                    // Collect test reports generated inside Docker
                     junit 'target/surefire-reports/*.xml'
+
+                    // Publish JaCoCo coverage report
                     publishHTML(target: [
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
@@ -37,36 +41,40 @@ pipeline {
                 }
             }
         }
+
         stage('Code Analysis') {
             steps {
                 script {
-                    // Run SonarQube analysis inside Docker container
+                    // Run SonarQube analysis with mounted workspace
                     sh """
-                        docker run --rm ${DOCKER_IMAGE} mvn sonar:sonar
+                        docker run --rm -v $WORKSPACE:/app -w /app ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image for the service
+                    // Rebuild final Docker image if needed
                     sh """
                         docker build -t inventory-service:latest .
                     """
                 }
             }
         }
+
         stage('Deploy with Ansible') {
             steps {
                 script {
-                    // Assuming Docker container has Ansible installed, or running Ansible inside a separate container
+                    // Assuming you have a local path with playbooks to mount
                     sh """
                         docker run --rm -v /path/to/ansible-playbook:/app ${DOCKER_IMAGE} ansible-playbook -i inventory/localhost.yml deploy.yml
                     """
                 }
             }
         }
+
         stage('Verify Deployment') {
             steps {
                 script {
@@ -77,6 +85,7 @@ pipeline {
             }
         }
     }
+
     post {
         always {
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
