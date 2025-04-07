@@ -23,6 +23,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
+
         <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -30,6 +31,7 @@
             <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
+
         <!-- JUnit Jupiter -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -37,6 +39,7 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
         <!-- Mockito -->
         <dependency>
             <groupId>org.mockito</groupId>
@@ -48,6 +51,7 @@
 
     <build>
         <plugins>
+            <!-- Spring Boot Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -98,6 +102,18 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Compiler Plugin for Java 22 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>${java.version}</release>
+                </configuration>
             </plugin>
         </plugins>
     </build>
