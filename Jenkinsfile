@@ -41,7 +41,7 @@ pipeline {
 
         stage('Code Analysis') {
             environment {
-                SONAR_TOKEN = credentials('SONAR_TOKEN') // Securely inject token from Jenkins
+                SONAR_TOKEN = credentials('SONAR_TOKEN')
             }
             steps {
                 script {
@@ -71,14 +71,14 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/c/Users/srila/ansible' // Update if needed
+                    def ansiblePath = '/d/inventory-service-main' 
 
                     bat """
                         docker run --rm ^
                             -v "${ansiblePath}:/ansible" ^
                             -v "${unixWorkspace}:${unixWorkspace}" ^
                             -w /ansible ^
-                            ${DOCKER_IMAGE} ^
+                            willhallonline/ansible:latest ^
                             ansible-playbook -i inventory/localhost.yml deploy.yml
                     """
                 }
