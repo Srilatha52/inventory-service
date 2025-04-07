@@ -72,17 +72,9 @@ pipeline {
         stage('Deploy with Ansible') {
             steps {
                 script {
-                    def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/d/inventory-service-main'
-
+                    // Running directly in WSL using Ubuntu where Ansible & Docker are installed
                     bat """
-                        docker run --rm ^
-                            -v "${ansiblePath}:/ansible" ^
-                            -v "${unixWorkspace}:${unixWorkspace}" ^
-                            -v "//var/run/docker.sock:/var/run/docker.sock" ^
-                            -w /ansible ^
-                            cytopia/ansible:latest ^
-                            ansible-playbook -i inventory/localhost.yml deploy.yml
+                        wsl bash -c 'cd /mnt/d/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml'
                     """
                 }
             }
