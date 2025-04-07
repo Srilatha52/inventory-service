@@ -20,7 +20,7 @@ pipeline {
                             -v "${unixWorkspace}:${unixWorkspace}" ^
                             -w "${unixWorkspace}" ^
                             ${DOCKER_IMAGE} ^
-                            mvn clean package
+                            mvn clean verify
                     """
                 }
             }
@@ -53,7 +53,9 @@ pipeline {
                             -e SONAR_HOST_URL=http://host.docker.internal:9000 ^
                             -e SONAR_TOKEN=${SONAR_TOKEN} ^
                             ${DOCKER_IMAGE} ^
-                            mvn sonar:sonar -Dsonar.token=${SONAR_TOKEN}
+                            mvn verify sonar:sonar ^
+                            -Dsonar.token=${SONAR_TOKEN} ^
+                            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
                     """
                 }
             }
@@ -79,7 +81,7 @@ pipeline {
                             -v "${unixWorkspace}:${unixWorkspace}" ^
                             -v "//var/run/docker.sock:/var/run/docker.sock" ^
                             -w /ansible ^
-                            willhallonline/ansible:latest ^
+                            cytopia/ansible:latest ^
                             ansible-playbook -i inventory/localhost.yml deploy.yml
                     """
                 }
