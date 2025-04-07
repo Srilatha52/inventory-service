@@ -71,12 +71,13 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/d/inventory-service-main' 
+                    def ansiblePath = '/d/inventory-service-main'
 
                     bat """
                         docker run --rm ^
                             -v "${ansiblePath}:/ansible" ^
                             -v "${unixWorkspace}:${unixWorkspace}" ^
+                            -v "//var/run/docker.sock:/var/run/docker.sock" ^
                             -w /ansible ^
                             willhallonline/ansible:latest ^
                             ansible-playbook -i inventory/localhost.yml deploy.yml
