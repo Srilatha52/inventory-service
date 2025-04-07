@@ -7,18 +7,18 @@ WORKDIR /app
 # Copy your project files into the container
 COPY . .
 
-# Install Docker (optional, needed for Docker in Docker)
-RUN apt-get update && apt-get install -y docker.io
+# Install dependencies
+RUN apt-get update && apt-get install -y curl unzip
 
-# Install SonarQube Scanner
-RUN curl -sS https://dl.bintray.com/sonarsource/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip -o sonar-scanner.zip \
+# Install SonarQube Scanner from official source
+RUN curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip \
     && unzip sonar-scanner.zip -d /opt/ \
     && rm sonar-scanner.zip \
     && ln -s /opt/sonar-scanner-4.6.2.2472-linux/bin/sonar-scanner /usr/local/bin/sonar-scanner
 
-# Set environment variables for SonarQube
+# Set environment variables
 ENV SONAR_SCANNER_HOME=/opt/sonar-scanner-4.6.2.2472-linux
 ENV PATH="${SONAR_SCANNER_HOME}/bin:${PATH}"
 
-# Run the Maven build by default
+# Run Maven build by default
 CMD ["mvn", "clean", "install"]
