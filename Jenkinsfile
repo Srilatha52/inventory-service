@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'inventory-service-container'
-        WORKSPACE_UNIX = "/c/Users/srila/.jenkins/workspace/Inventory-service-main"
+        WORKSPACE_UNIX = "${env.WORKSPACE}".replace('C:\\', '/c/').replaceAll('\\\\', '/')
     }
 
     stages {
