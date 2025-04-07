@@ -13,11 +13,14 @@ pipeline {
         stage('Build and Test in Docker') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE} ."
-
+                    // Convert to Docker-compatible Unix path
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
 
-                    sh """
+                    // Build Docker image
+                    bat "docker build -t ${DOCKER_IMAGE} ."
+
+                    // Run tests in container with mounted workspace
+                    bat """
                         docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn clean package
                     """
                 }
@@ -25,7 +28,6 @@ pipeline {
             post {
                 always {
                     junit 'target/surefire-reports/*.xml'
-
                     publishHTML(target: [
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
@@ -43,7 +45,7 @@ pipeline {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
 
-                    sh """
+                    bat """
                         docker run --rm -v "${unixWorkspace}:${unixWorkspace}" -w "${unixWorkspace}" ${DOCKER_IMAGE} mvn sonar:sonar
                     """
                 }
@@ -53,7 +55,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t inventory-service:latest ."
+                    bat "docker build -t inventory-service:latest ."
                 }
             }
         }
@@ -62,14 +64,14 @@ pipeline {
             steps {
                 script {
                     def unixWorkspace = WORKSPACE.replace('\\', '/').replace('C:', '/c')
-                    def ansiblePath = '/c/Users/srila/ansible' // 🔁 Update to your actual path if needed
+                    def ansiblePath = '/c/Users/srila/ansible' // Update this if needed
 
-                    sh """
-                        docker run --rm \
-                            -v "${ansiblePath}:/ansible" \
-                            -v "${unixWorkspace}:${unixWorkspace}" \
-                            -w /ansible \
-                            ${DOCKER_IMAGE} \
+                    bat """
+                        docker run --rm ^
+                            -v "${ansiblePath}:/ansible" ^
+                            -v "${unixWorkspace}:${unixWorkspace}" ^
+                            -w /ansible ^
+                            ${DOCKER_IMAGE} ^
                             ansible-playbook -i inventory/localhost.yml deploy.yml
                     """
                 }
@@ -79,7 +81,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    sh """
+                    bat """
                         docker run --rm ${DOCKER_IMAGE} curl -f http://localhost:8080/api/inventory || exit 1
                     """
                 }
