@@ -73,8 +73,7 @@ pipeline {
             steps {
                 script {
                     // Running directly in WSL using Ubuntu where Ansible & Docker are installed
-                    bat 'wsl sh -c "cd /mnt/d/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
-                }
+                    bat 'wsl sh -c "cd ~/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
             }
         }
 
