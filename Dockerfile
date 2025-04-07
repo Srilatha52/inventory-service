@@ -1,5 +1,5 @@
 # Use a base image that supports Java and Maven
-FROM maven:3.8.1-openjdk-17-slim
+FROM maven:3.8.6-openjdk-22-slim
 
 # Set the working directory
 WORKDIR /app
