@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'inventory-service-container'
+        SONAR_URL = 'http://host.docker.internal:9000'
+        SONAR_TOKEN = credentials('sonarqube-token') // Replace this with the correct Jenkins credential ID
     }
 
     stages {
@@ -16,16 +18,19 @@ pipeline {
             steps {
                 script {
                     def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
+                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1')  // correct case
+
+                    echo "✅ Unix Path for Docker: ${unixPath}"
 
                     // Build Docker image
                     sh "docker build -t ${DOCKER_IMAGE} ."
 
-                    // Run Maven inside container by cd'ing to folder instead of using -w
+                    // Run tests and generate coverage
                     sh """
                         docker run --rm \
                         -v ${unixPath}:${unixPath} \
-                        ${DOCKER_IMAGE} sh -c "cd ${unixPath} && mvn clean verify"
+                        -w ${unixPath} \
+                        ${DOCKER_IMAGE} mvn clean verify
                     """
                 }
             }
@@ -38,7 +43,7 @@ pipeline {
                         keepAll: true,
                         reportDir: 'target/site/jacoco',
                         reportFiles: 'index.html',
-                        reportName: 'JaCoCo Report'
+                        reportName: 'JaCoCo Coverage Report'
                     ])
                 }
             }
@@ -48,18 +53,23 @@ pipeline {
             steps {
                 script {
                     def windowsPath = "${env.WORKSPACE}".replace('\\', '/')
-                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1').toLowerCase()
+                    def unixPath = windowsPath.replaceFirst(/^([A-Za-z]):/, '/$1')
 
-                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        sh """
-                            docker run --rm \
-                            -e SONAR_TOKEN=${SONAR_TOKEN} \
-                            -e SONAR_HOST_URL=http://host.docker.internal:9000 \
-                            -v ${unixPath}:${unixPath} \
-                            ${DOCKER_IMAGE} sh -c "cd ${unixPath} && mvn sonar:sonar"
-                        """
-                    }
+                    sh """
+                        docker run --rm \
+                        -e SONAR_HOST_URL=${SONAR_URL} \
+                        -e SONAR_TOKEN=${SONAR_TOKEN} \
+                        -v ${unixPath}:${unixPath} \
+                        -w ${unixPath} \
+                        ${DOCKER_IMAGE} mvn sonar:sonar
+                    """
                 }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t inventory-service:latest ."
             }
         }
 
@@ -81,10 +91,10 @@ pipeline {
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
         }
         success {
-            echo 'Deployment successful!'
+            echo ' Deployment successful!'
         }
         failure {
-            echo 'Deployment failed.'
+            echo ' Deployment failed.'
         }
     }
 }
