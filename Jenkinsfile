@@ -1,28 +1,23 @@
 pipeline {
     agent any
-    environment {
-        // Optional: Set JAVA_HOME if needed in Windows
-        JAVA_HOME = "C:\\path\\to\\jdk-22"  // Adjust if JDK is installed in Windows
-    }
     stages {
         stage('Checkout') {
             steps {
-                // Pulls from Git
                 git branch: 'main', url: 'https://github.com/Srilatha52/inventory-service.git'
             }
         }
         stage('Build') {
             steps {
-                bat 'mvnw.cmd clean package'
+                bat 'wsl bash -c "cd /mnt/d/inventory-service-main && ./mvnw clean package"'
             }
         }
         stage('Test') {
             steps {
-                bat 'mvnw.cmd test'
+                bat 'wsl bash -c "cd /mnt/d/inventory-service-main && ./mvnw test"'
             }
             post {
                 always {
-                    // Publish test results and JaCoCo report
+                    // Windows path for Jenkins to access reports
                     junit 'target/surefire-reports/*.xml'
                     publishHTML(target: [
                         allowMissing: false,
@@ -37,24 +32,23 @@ pipeline {
         }
         stage('Code Analysis') {
             steps {
-                // Skip if SonarQube not configured
-                bat 'mvnw.cmd sonar:sonar || echo "SonarQube not configured, skipping"'
+                bat 'wsl bash -c "cd /mnt/d/inventory-service-main && ./mvnw sonar:sonar || echo SonarQube not configured, skipping"'
             }
         }
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t inventory-service:latest .'
+                bat 'wsl bash -c "cd /mnt/d/inventory-service-main && docker build -t inventory-service:latest ."'
             }
         }
         stage('Deploy with Ansible') {
             steps {
-                bat 'wsl ansible-playbook -i inventory/localhost.yml deploy.yml'
+                bat 'wsl bash -c "cd /mnt/d/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
             }
         }
         stage('Verify Deployment') {
             steps {
-                bat 'timeout 5'  // Wait for container to start
-                bat 'curl -f http://localhost:8080/api/inventory || exit /b 1'
+                bat 'timeout 5'
+                bat 'wsl bash -c "curl -f http://localhost:8080/api/inventory || exit 1"'
             }
         }
     }
