@@ -74,9 +74,10 @@ pipeline {
                 script {
                     // Running directly in WSL using Ubuntu where Ansible & Docker are installed
                     bat 'wsl sh -c "cd ~/inventory-service-main && ansible-playbook -i inventory/localhost.yml deploy.yml"'
+                }
             }
         }
-
+        
         stage('Verify Deployment') {
             steps {
                 script {
